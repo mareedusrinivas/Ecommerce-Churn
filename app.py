@@ -107,14 +107,26 @@ def preprocess_data(df):
         
         # Build DataFrame with correct column order for model
         processed_data = []
+        mappings = {
+            'gender': {'male': 0, 'female': 1, 'm': 0, 'f': 1},
+            'subscriptiontype': {'basic': 0, 'standard': 1, 'premium': 2},
+            'contractlength': {'monthly': 0, 'quarterly': 1, 'annual': 2}
+        }
+
         for exp in EXPECTED_COLUMNS:
             norm_exp = exp.replace(' ', '').replace('_', '').lower()
             orig_col = norm_map.get(norm_exp)
             if orig_col:
-                processed_data.append(pd.to_numeric(df[orig_col], errors='coerce'))
+                series = df[orig_col].astype(str).str.strip().str.lower()
+                if norm_exp in mappings:
+                    # Apply categorical mapping
+                    val = series.map(mappings[norm_exp]).fillna(0).astype(float)
+                else:
+                    # Conventional numeric conversion
+                    val = pd.to_numeric(df[orig_col], errors='coerce').fillna(0)
+                processed_data.append(val)
             else:
-                # If optional but missing, fallback to 0
-                processed_data.append(pd.Series([0] * len(df)))
+                processed_data.append(pd.Series([0.0] * len(df)))
                 
         processed = pd.concat(processed_data, axis=1)
         processed.columns = EXPECTED_COLUMNS
